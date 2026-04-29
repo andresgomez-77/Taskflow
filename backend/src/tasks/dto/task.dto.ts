@@ -7,28 +7,27 @@ import {
   IsInt,
   Min,
 } from "class-validator";
-import { TaskStatus } from '@prisma/client';
-
+import { TaskStatus } from "@prisma/client";
 
 // ─── CreateTaskDto ────────────────────────────────────────────────────────────
 export class CreateTaskDto {
   @IsString()
   @MinLength(1, { message: "El título no puede estar vacío" })
   @MaxLength(200, { message: "El título no puede superar los 200 caracteres" })
-  title: string;
+  declare title: string;
 
   @IsString()
   @IsOptional()
   @MaxLength(2000, {
     message: "La descripción no puede superar los 2000 caracteres",
   })
-  description?: string;
+  declare description?: string;
 
   @IsEnum(TaskStatus, {
     message: `El estado debe ser uno de: ${Object.values(TaskStatus).join(", ")}`,
   })
   @IsOptional()
-  status?: TaskStatus;
+  declare status?: TaskStatus;
 }
 
 // ─── UpdateTaskDto ────────────────────────────────────────────────────────────
@@ -40,28 +39,28 @@ export class UpdateTaskDto {
   @IsOptional()
   @MinLength(1)
   @MaxLength(200)
-  title?: string;
+  declare title?: string;
 
   @IsString()
   @IsOptional()
   @MaxLength(2000)
-  description?: string;
+  declare description?: string;
 
   @IsEnum(TaskStatus, {
     message: `Estado inválido. Opciones: ${Object.values(TaskStatus).join(", ")}`,
   })
   @IsOptional()
-  status?: TaskStatus;
+  declare status?: TaskStatus;
 
   @IsInt()
   @IsOptional()
   @Min(0)
-  order?: number;
+  declare order?: number;
 }
 
 // ─── TaskResponseDto ──────────────────────────────────────────────────────────
 // Lo que el backend retorna al frontend. Tipado explícito del contrato.
-export class TaskResponseDto {
+export interface TaskResponseDto {
   id: string;
   title: string;
   description: string | null;
