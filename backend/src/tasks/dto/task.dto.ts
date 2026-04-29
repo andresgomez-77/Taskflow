@@ -7,12 +7,8 @@ import {
   IsInt,
   Min,
 } from "class-validator";
+import { TaskStatus } from '@prisma/client';
 
-export enum TaskStatus {
-  TODO = "TODO",
-  IN_PROGRESS = "IN_PROGRESS",
-  DONE = "DONE",
-}
 
 // ─── CreateTaskDto ────────────────────────────────────────────────────────────
 export class CreateTaskDto {

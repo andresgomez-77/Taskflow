@@ -1,20 +1,18 @@
-// This is your Prisma schema file.
-// Learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
-  provider = "sqlite"        // ← cambia postgresql por sqlite
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// ─── Enums ──────────────────────────────────────────────────
-
-
-
-// ─── Models ─────────────────────────────────────────────────
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
 
 model User {
   id        String   @id @default(cuid())
@@ -29,15 +27,15 @@ model User {
 }
 
 model Task {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   title       String
   description String?
-  status      String   @default("TODO")
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  status      TaskStatus @default(TODO)
+  order       Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("tasks")
 }

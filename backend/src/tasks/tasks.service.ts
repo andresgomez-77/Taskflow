@@ -3,8 +3,8 @@ import {
   NotFoundException,
   ForbiddenException,
 } from "@nestjs/common";
+import { TaskStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { TaskStatus } from "./dto/task.dto";
 import type {
   CreateTaskDto,
   UpdateTaskDto,
