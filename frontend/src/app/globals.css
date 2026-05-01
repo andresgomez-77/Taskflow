@@ -3,7 +3,9 @@
 @tailwind utilities;
 
 @layer base {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     box-sizing: border-box;
   }
 
@@ -15,6 +17,7 @@
   body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
   }
 }
 
