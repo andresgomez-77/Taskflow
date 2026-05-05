@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2, Calendar, AlertCircle } from "lucide-react";
+import { Pencil, Trash2, Calendar, AlertCircle, RefreshCw } from "lucide-react";
 import { TaskStatus, TaskPriority, type Task } from "@/types";
 import { useDeleteTask } from "@/hooks/useTasks";
 import { formatDate, cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ interface TaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
 }
-// ─── Config visual ────────────────────────────────────────────────────────────
+
 const statusConfig: Record<TaskStatus, { label: string; className: string }> = {
   [TaskStatus.TODO]: {
     label: "Por hacer",
@@ -48,7 +48,7 @@ const priorityConfig: Record<
     dot: "bg-red-500",
   },
 };
-// ─── Helper: verifica si la fecha venció ──────────────────────────────────────
+
 const isOverdue = (dueDate: string | null): boolean => {
   if (!dueDate) return false;
   return new Date(dueDate) < new Date();
@@ -58,7 +58,7 @@ const isDueSoon = (dueDate: string | null): boolean => {
   if (!dueDate) return false;
   const diff = new Date(dueDate).getTime() - new Date().getTime();
   const hours = diff / (1000 * 60 * 60);
-  return hours > 0 && hours <= 48; // vence en menos de 48 horas
+  return hours > 0 && hours <= 48;
 };
 
 export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
@@ -75,18 +75,14 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
     deleteTask(task.id);
   };
 
-  // ─── Drag handlers ────────────────────────────────────────────────────────
   const handleDragStart = (e: React.DragEvent<HTMLElement>) => {
-    // Guardamos el id y el status actual en el dataTransfer
     e.dataTransfer.setData("taskId", task.id);
     e.dataTransfer.setData("fromStatus", task.status);
     e.dataTransfer.effectAllowed = "move";
     setIsDragging(true);
   };
 
-  const handleDragEnd = () => {
-    setIsDragging(false);
-  };
+  const handleDragEnd = () => setIsDragging(false);
 
   const { label: statusLabel, className: statusClass } =
     statusConfig[task.status];
@@ -114,16 +110,29 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
           "border-l-4 border-l-yellow-500 border-gray-200 dark:border-gray-700",
         task.priority === TaskPriority.LOW &&
           "border-l-4 border-l-green-500 border-gray-200 dark:border-gray-700",
-        // Visual feedback mientras arrastra
         isDragging && "opacity-40 scale-95 rotate-1",
+        isDeleting && "opacity-50",
       )}
-      aria-label={`Tarea: ${task.title}. Arrastra para mover de columna.`}
+      aria-label={`Tarea: ${task.title}${task.isRecurring ? " (diaria)" : ""}`}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-snug line-clamp-2">
-          {task.title}
-        </h3>
+        <div className="flex items-center gap-1.5 min-w-0">
+          {/* Badge recurrente */}
+          {task.isRecurring && (
+            <span title="Tarea diaria" aria-label="Tarea diaria">
+              <RefreshCw
+                className="h-3.5 w-3.5 shrink-0 text-indigo-500 dark:text-indigo-400"
+                aria-hidden="true"
+              />
+            </span>
+          )}
+          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-snug line-clamp-2">
+            {task.title}
+          </h3>
+        </div>
+
+        {/* Actions */}
         <div
           className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
           role="group"
@@ -164,7 +173,7 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
       )}
 
       {/* Due date */}
-      {task.dueDate && (
+      {task.dueDate && !task.isRecurring && (
         <div
           className={cn(
             "mt-2 flex items-center gap-1 text-xs font-medium rounded-md px-2 py-1 w-fit",

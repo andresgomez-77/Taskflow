@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, type FormEvent } from "react";
+import { RefreshCw } from "lucide-react";
 import { TaskStatus, TaskPriority, type Task } from "@/types";
 import { useCreateTask, useUpdateTask } from "@/hooks/useTasks";
 import { getErrorMessage, cn } from "@/lib/utils";
@@ -20,13 +21,13 @@ interface FormState {
   status: TaskStatus;
   priority: TaskPriority;
   dueDate: string;
+  isRecurring: boolean;
 }
 
 interface FormErrors {
   title?: string;
 }
 
-// ─── Config visual de prioridades ─────────────────────────────────────────────
 const priorityConfig: Record<
   TaskPriority,
   { label: string; activeClass: string }
@@ -68,6 +69,7 @@ export const TaskForm = ({
     status: task?.status ?? defaultStatus,
     priority: task?.priority ?? TaskPriority.MEDIUM,
     dueDate: task?.dueDate ? task.dueDate.split("T")[0] : "",
+    isRecurring: task?.isRecurring ?? false,
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -93,6 +95,7 @@ export const TaskForm = ({
         status: task.status,
         priority: task.priority,
         dueDate: task.dueDate ? task.dueDate.split("T")[0] : "",
+        isRecurring: task.isRecurring,
       });
     }
   }, [task]);
@@ -114,7 +117,11 @@ export const TaskForm = ({
       description: formState.description.trim() || undefined,
       status: formState.status,
       priority: formState.priority,
-      dueDate: formState.dueDate || undefined,
+      // Si es recurrente, ignoramos la fecha límite
+      dueDate: formState.isRecurring
+        ? undefined
+        : formState.dueDate || undefined,
+      isRecurring: formState.isRecurring,
     };
     if (isEditing && task) {
       updateTask({ id: task.id, data }, { onSuccess });
@@ -123,9 +130,14 @@ export const TaskForm = ({
     }
   };
 
-  const handleFieldChange = (field: keyof FormState, value: string) => {
+  const handleFieldChange = (
+    field: keyof FormState,
+    value: string | boolean,
+  ) => {
     setFormState((prev) => ({ ...prev, [field]: value }));
-    if (field in errors) setErrors((prev) => ({ ...prev, [field]: undefined }));
+    if (typeof value === "string" && field in errors) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
   };
 
   return (
@@ -138,6 +150,7 @@ export const TaskForm = ({
           {getErrorMessage(apiError)}
         </div>
       )}
+
       {/* Título */}
       <Input
         label="Título"
@@ -149,6 +162,7 @@ export const TaskForm = ({
         disabled={isPending}
         autoFocus
       />
+
       {/* Descripción */}
       <div className="flex flex-col gap-1.5">
         <label
@@ -156,9 +170,7 @@ export const TaskForm = ({
           className="text-sm font-medium text-gray-700 dark:text-gray-300"
         >
           Descripción{" "}
-          <span className="text-gray-400 font-normal dark:text-gray-500">
-            (opcional)
-          </span>
+          <span className="text-gray-400 font-normal">(opcional)</span>
         </label>
         <textarea
           id="task-description"
@@ -175,6 +187,67 @@ export const TaskForm = ({
             "disabled:cursor-not-allowed disabled:bg-gray-50 dark:disabled:bg-gray-900",
           )}
         />
+      </div>
+
+      {/* Tarea recurrente toggle */}
+      <div
+        className={cn(
+          "flex items-center justify-between rounded-xl border p-3 transition-colors cursor-pointer",
+          formState.isRecurring
+            ? "border-indigo-300 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-900/30"
+            : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800",
+        )}
+        onClick={() => handleFieldChange("isRecurring", !formState.isRecurring)}
+        role="checkbox"
+        aria-checked={formState.isRecurring}
+        tabIndex={0}
+        onKeyDown={(e) =>
+          e.key === "Enter" &&
+          handleFieldChange("isRecurring", !formState.isRecurring)
+        }
+      >
+        <div className="flex items-center gap-2">
+          <RefreshCw
+            className={cn(
+              "h-4 w-4",
+              formState.isRecurring
+                ? "text-indigo-600 dark:text-indigo-400"
+                : "text-gray-400",
+            )}
+            aria-hidden="true"
+          />
+          <div>
+            <p
+              className={cn(
+                "text-sm font-medium",
+                formState.isRecurring
+                  ? "text-indigo-700 dark:text-indigo-300"
+                  : "text-gray-700 dark:text-gray-300",
+              )}
+            >
+              Tarea diaria
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Se resetea automáticamente cada día
+            </p>
+          </div>
+        </div>
+        {/* Toggle visual */}
+        <div
+          className={cn(
+            "relative h-5 w-9 rounded-full transition-colors",
+            formState.isRecurring
+              ? "bg-indigo-600"
+              : "bg-gray-300 dark:bg-gray-600",
+          )}
+        >
+          <span
+            className={cn(
+              "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
+              formState.isRecurring ? "translate-x-4" : "translate-x-0.5",
+            )}
+          />
+        </div>
       </div>
 
       {/* Prioridad */}
@@ -213,30 +286,33 @@ export const TaskForm = ({
           )}
         </div>
       </div>
-      {/* Fecha límite */}
-      <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="task-duedate"
-          className="text-sm font-medium text-gray-700 dark:text-gray-300"
-        >
-          Fecha límite{" "}
-          <span className="text-gray-400 font-normal">(opcional)</span>
-        </label>
-        <input
-          id="task-duedate"
-          type="date"
-          value={formState.dueDate}
-          onChange={(e) => handleFieldChange("dueDate", e.target.value)}
-          disabled={isPending}
-          min={new Date().toISOString().split("T")[0]}
-          className={cn(
-            "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900",
-            "bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100",
-            "focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500",
-            "disabled:cursor-not-allowed disabled:bg-gray-50 dark:disabled:bg-gray-900",
-          )}
-        />
-      </div>
+
+      {/* Fecha límite — se oculta si es recurrente */}
+      {!formState.isRecurring && (
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="task-duedate"
+            className="text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Fecha límite{" "}
+            <span className="text-gray-400 font-normal">(opcional)</span>
+          </label>
+          <input
+            id="task-duedate"
+            type="date"
+            value={formState.dueDate}
+            onChange={(e) => handleFieldChange("dueDate", e.target.value)}
+            disabled={isPending}
+            min={new Date().toISOString().split("T")[0]}
+            className={cn(
+              "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900",
+              "bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100",
+              "focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500",
+              "disabled:cursor-not-allowed disabled:bg-gray-50 dark:disabled:bg-gray-900",
+            )}
+          />
+        </div>
+      )}
 
       {/* Estado */}
       <div className="flex flex-col gap-1.5">
@@ -255,7 +331,7 @@ export const TaskForm = ({
                 "flex flex-1 cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
                 formState.status === value
                   ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-500"
-                  : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800",
+                  : "border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800",
               )}
             >
               <input
@@ -272,6 +348,7 @@ export const TaskForm = ({
           ))}
         </div>
       </div>
+
       {/* Actions */}
       <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
         <Button

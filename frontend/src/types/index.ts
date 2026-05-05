@@ -23,6 +23,7 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   dueDate: string | null;
+  isRecurring: boolean;
   order: number;
   createdAt: string;
   updatedAt: string;
@@ -40,6 +41,7 @@ export interface CreateTaskData {
   status?: TaskStatus;
   priority?: TaskPriority;
   dueDate?: string;
+  isRecurring?: boolean;
 }
 
 export interface UpdateTaskData {
@@ -48,6 +50,7 @@ export interface UpdateTaskData {
   status?: TaskStatus;
   priority?: TaskPriority;
   dueDate?: string;
+  isRecurring?: boolean;
   order?: number;
 }
 

@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Plus } from "lucide-react";
-import { TaskStatus, type Task } from "@/types";
+import { TaskStatus, TaskPriority, type Task, type KanbanBoard } from "@/types";
 import { useKanbanBoard } from "@/hooks/useTasks";
+import { useRecurringReset } from "@/hooks/Userecurringreset";
 import { AuthGuard } from "@/components/layout/AuthGuard";
 import { Navbar } from "@/components/layout/Navbar";
 import { KanbanColumn } from "@/components/kanban/KanbanColumn";
+import {
+  KanbanFilters,
+  type FilterState,
+} from "@/components/kanban/Kanbanfilters";
 import { TaskForm } from "@/components/tasks/TaskForm";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -47,11 +52,67 @@ const COLUMNS: {
   },
 ];
 
+const DEFAULT_FILTERS: FilterState = {
+  search: "",
+  priority: "ALL",
+  onlyOverdue: false,
+  onlyRecurring: false,
+};
+
+// ─── Lógica de filtrado centralizada ─────────────────────────────────────────
+const applyFilters = (tasks: Task[], filters: FilterState): Task[] => {
+  return tasks.filter((task) => {
+    if (
+      filters.search &&
+      !task.title.toLowerCase().includes(filters.search.toLowerCase())
+    ) {
+      return false;
+    }
+    if (filters.priority !== "ALL" && task.priority !== filters.priority) {
+      return false;
+    }
+    if (filters.onlyOverdue) {
+      if (!task.dueDate || new Date(task.dueDate) >= new Date()) return false;
+    }
+    if (filters.onlyRecurring && !task.isRecurring) {
+      return false;
+    }
+    return true;
+  });
+};
+
 const DashboardContent = () => {
   const { user } = useAuthStore();
   const [modalState, setModalState] = useState<ModalState>({ type: "closed" });
   const [activeTab, setActiveTab] = useState<TaskStatus>(TaskStatus.TODO);
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+
   const { data: kanban, isLoading, isError, refetch } = useKanbanBoard();
+
+  // Reset de tareas recurrentes al cargar
+  useRecurringReset();
+
+  // ─── Kanban filtrado con useMemo ──────────────────────────────────────────
+  // useMemo evita recalcular los filtros en cada render
+  // solo se recalcula cuando cambian kanban o filters
+  const filteredKanban = useMemo((): KanbanBoard | undefined => {
+    if (!kanban) return undefined;
+    return {
+      [TaskStatus.TODO]: applyFilters(kanban[TaskStatus.TODO], filters),
+      [TaskStatus.IN_PROGRESS]: applyFilters(
+        kanban[TaskStatus.IN_PROGRESS],
+        filters,
+      ),
+      [TaskStatus.DONE]: applyFilters(kanban[TaskStatus.DONE], filters),
+    };
+  }, [kanban, filters]);
+
+  const totalFiltered = filteredKanban
+    ? Object.values(filteredKanban).reduce(
+        (acc, tasks) => acc + tasks.length,
+        0,
+      )
+    : 0;
 
   const handleOpenCreate = (status: TaskStatus = activeTab) =>
     setModalState({ type: "create", defaultStatus: status });
@@ -103,11 +164,18 @@ const DashboardContent = () => {
         </div>
       </div>
 
+      {/* Filtros */}
+      <KanbanFilters
+        filters={filters}
+        onChange={setFilters}
+        totalResults={totalFiltered}
+      />
+
       {/* Mobile Tabs */}
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 sm:hidden">
         <div className="flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-t-xl overflow-hidden shadow-sm">
           {COLUMNS.map(({ status, label, activeClass, dotClass }) => {
-            const count = kanban?.[status]?.length ?? 0;
+            const count = filteredKanban?.[status]?.length ?? 0;
             const isActive = activeTab === status;
             return (
               <button
@@ -147,7 +215,7 @@ const DashboardContent = () => {
               <KanbanColumn
                 key={status}
                 status={status}
-                tasks={kanban?.[status] ?? []}
+                tasks={filteredKanban?.[status] ?? []}
                 onAddTask={handleOpenCreate}
                 onEditTask={handleOpenEdit}
                 isMobile
@@ -164,7 +232,7 @@ const DashboardContent = () => {
             <KanbanColumn
               key={status}
               status={status}
-              tasks={kanban?.[status] ?? []}
+              tasks={filteredKanban?.[status] ?? []}
               onAddTask={handleOpenCreate}
               onEditTask={handleOpenEdit}
             />

@@ -7,6 +7,7 @@ import {
   IsInt,
   Min,
   IsDateString,
+  IsBoolean,
 } from "class-validator";
 import { TaskStatus, TaskPriority } from "@prisma/client";
 
@@ -32,6 +33,10 @@ export class CreateTaskDto {
   @IsDateString()
   @IsOptional()
   declare dueDate?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  declare isRecurring?: boolean;
 }
 
 export class UpdateTaskDto {
@@ -58,6 +63,10 @@ export class UpdateTaskDto {
   @IsOptional()
   declare dueDate?: string;
 
+  @IsBoolean()
+  @IsOptional()
+  declare isRecurring?: boolean;
+
   @IsInt()
   @IsOptional()
   @Min(0)
@@ -71,6 +80,7 @@ export interface TaskResponseDto {
   status: TaskStatus;
   priority: TaskPriority;
   dueDate: Date | null;
+  isRecurring: boolean;
   order: number;
   createdAt: Date;
   updatedAt: Date;

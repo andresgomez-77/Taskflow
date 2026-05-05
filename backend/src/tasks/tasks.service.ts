@@ -56,6 +56,7 @@ export class TasksService {
         status: dto.status ?? TaskStatus.TODO,
         priority: dto.priority ?? TaskPriority.MEDIUM,
         dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+        isRecurring: dto.isRecurring ?? false,
         order: nextOrder,
         userId,
       },
