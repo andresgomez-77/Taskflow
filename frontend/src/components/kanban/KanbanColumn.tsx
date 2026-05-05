@@ -1,9 +1,10 @@
 "use client";
-
+import { useState } from "react";
 import { Plus } from "lucide-react";
 import { TaskStatus, type Task } from "@/types";
 import { TaskCard } from "./TaskCard";
 import { EmptyState } from "@/components/ui/Feedback";
+import { useUpdateTask } from "@/hooks/useTasks";
 import { cn } from "@/lib/utils";
 
 interface KanbanColumnProps {
@@ -16,13 +17,20 @@ interface KanbanColumnProps {
 
 const columnConfig: Record<
   TaskStatus,
-  { title: string; headerClass: string; dotClass: string; countClass: string }
+  {
+    title: string;
+    headerClass: string;
+    dotClass: string;
+    countClass: string;
+    dropClass: string;
+  }
 > = {
   [TaskStatus.TODO]: {
     title: "Por hacer",
     headerClass: "border-t-gray-400",
     dotClass: "bg-gray-400",
     countClass: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+    dropClass: "border-gray-400 bg-gray-100/50 dark:bg-gray-700/50",
   },
   [TaskStatus.IN_PROGRESS]: {
     title: "En progreso",
@@ -30,6 +38,7 @@ const columnConfig: Record<
     dotClass: "bg-blue-500",
     countClass:
       "bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    dropClass: "border-blue-400 bg-blue-50/50 dark:bg-blue-900/20",
   },
   [TaskStatus.DONE]: {
     title: "Completado",
@@ -37,6 +46,7 @@ const columnConfig: Record<
     dotClass: "bg-green-500",
     countClass:
       "bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+    dropClass: "border-green-400 bg-green-50/50 dark:bg-green-900/20",
   },
 };
 
@@ -47,18 +57,54 @@ export const KanbanColumn = ({
   onEditTask,
   isMobile = false,
 }: KanbanColumnProps) => {
-  const { title, headerClass, dotClass, countClass } = columnConfig[status];
+  const { title, headerClass, dotClass, countClass, dropClass } =
+    columnConfig[status];
+  const [isDragOver, setIsDragOver] = useState(false);
+  const { mutate: updateTask } = useUpdateTask();
+
+  // ─── Drop handlers ────────────────────────────────────────────────────────
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    // Sin esto el browser no permite el drop — obligatorio
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    // Solo quitamos el highlight si salimos del área del drop zone
+    // relatedTarget es el elemento al que el mouse fue
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    const taskId = e.dataTransfer.getData("taskId");
+    const fromStatus = e.dataTransfer.getData("fromStatus");
+
+    // Solo actualizamos si se movió a una columna diferente
+    if (!taskId || fromStatus === status) return;
+
+    updateTask({ id: taskId, data: { status } });
+  };
 
   return (
     <section
       className={cn(
         "flex w-full flex-col rounded-xl border border-gray-200 border-t-4",
         "bg-gray-50/70 dark:bg-gray-800/50 dark:border-gray-700",
+        "transition-all duration-150",
         headerClass,
         isMobile && "rounded-t-none border-t-0",
+        // Visual feedback cuando algo se arrastra sobre la columna
+        isDragOver && `border-2 ${dropClass}`,
       )}
       aria-label={`Columna: ${title}`}
     >
+      {/* Header — solo en desktop */}
       {!isMobile && (
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
@@ -88,18 +134,37 @@ export const KanbanColumn = ({
         </div>
       )}
 
+      {/* Drop zone — aquí ocurre la magia */}
       <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         className={cn(
           "flex flex-1 flex-col gap-2 overflow-y-auto px-3 pb-3 pt-3",
+          "transition-all duration-150 rounded-b-xl",
           isMobile ? "max-h-[calc(100vh-220px)]" : "max-h-[calc(100vh-260px)]",
+          // Zona de drop con indicador visual
+          isDragOver && "pt-4 pb-4",
         )}
         role="list"
         aria-label={`Tareas en ${title}`}
       >
-        {tasks.length === 0 ? (
+        {/* Indicador visual de drop */}
+        {isDragOver && (
+          <div
+            className={cn(
+              "flex items-center justify-center rounded-lg border-2 border-dashed py-4 text-xs font-medium animate-fade-in",
+              dropClass,
+            )}
+          >
+            Suelta aquí para mover a {title}
+          </div>
+        )}
+
+        {tasks.length === 0 && !isDragOver ? (
           <EmptyState
             title="Sin tareas"
-            message="Agrega una tarea en esta columna"
+            message="Agrega o arrastra una tarea aquí"
             action={
               <button
                 onClick={() => onAddTask(status)}

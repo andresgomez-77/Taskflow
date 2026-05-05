@@ -10,7 +10,6 @@ interface TaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
 }
-
 // ─── Config visual ────────────────────────────────────────────────────────────
 const statusConfig: Record<TaskStatus, { label: string; className: string }> = {
   [TaskStatus.TODO]: {
@@ -49,7 +48,6 @@ const priorityConfig: Record<
     dot: "bg-red-500",
   },
 };
-
 // ─── Helper: verifica si la fecha venció ──────────────────────────────────────
 const isOverdue = (dueDate: string | null): boolean => {
   if (!dueDate) return false;
@@ -65,6 +63,7 @@ const isDueSoon = (dueDate: string | null): boolean => {
 
 export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const { mutate: deleteTask, isPending: isDeleting } = useDeleteTask();
 
   const handleDeleteClick = () => {
@@ -74,6 +73,19 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
       return;
     }
     deleteTask(task.id);
+  };
+
+  // ─── Drag handlers ────────────────────────────────────────────────────────
+  const handleDragStart = (e: React.DragEvent<HTMLElement>) => {
+    // Guardamos el id y el status actual en el dataTransfer
+    e.dataTransfer.setData("taskId", task.id);
+    e.dataTransfer.setData("fromStatus", task.status);
+    e.dataTransfer.effectAllowed = "move";
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
   };
 
   const { label: statusLabel, className: statusClass } =
@@ -88,30 +100,30 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
 
   return (
     <article
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       className={cn(
         "group rounded-xl border bg-white p-4 shadow-sm",
-        "transition-all duration-150",
+        "transition-all duration-150 cursor-grab active:cursor-grabbing",
         "hover:shadow-md focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-1",
         "dark:bg-gray-800",
-        // Borde izquierdo según prioridad
         task.priority === TaskPriority.HIGH &&
           "border-l-4 border-l-red-500 border-gray-200 dark:border-gray-700",
         task.priority === TaskPriority.MEDIUM &&
           "border-l-4 border-l-yellow-500 border-gray-200 dark:border-gray-700",
         task.priority === TaskPriority.LOW &&
           "border-l-4 border-l-green-500 border-gray-200 dark:border-gray-700",
-        overdue && "border-l-red-600 dark:border-l-red-500",
-        isDeleting && "opacity-50",
+        // Visual feedback mientras arrastra
+        isDragging && "opacity-40 scale-95 rotate-1",
       )}
-      aria-label={`Tarea: ${task.title}`}
+      aria-label={`Tarea: ${task.title}. Arrastra para mover de columna.`}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-snug line-clamp-2">
           {task.title}
         </h3>
-
-        {/* Actions */}
         <div
           className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
           role="group"
@@ -124,7 +136,6 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
           >
             <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
-
           <button
             onClick={handleDeleteClick}
             disabled={isDeleting}
@@ -186,8 +197,6 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
         >
           {statusLabel}
         </span>
-
-        {/* Prioridad */}
         <div
           className={cn(
             "flex items-center gap-1 text-xs font-medium",
@@ -202,7 +211,6 @@ export const TaskCard = ({ task, onEdit }: TaskCardProps) => {
         </div>
       </div>
 
-      {/* Confirm delete */}
       {isConfirmingDelete && (
         <p
           role="alert"
