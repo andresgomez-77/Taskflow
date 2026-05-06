@@ -4,14 +4,15 @@ import { useState, useMemo } from "react";
 import { Plus } from "lucide-react";
 import { TaskStatus, TaskPriority, type Task, type KanbanBoard } from "@/types";
 import { useKanbanBoard } from "@/hooks/useTasks";
-import { useRecurringReset } from "@/hooks/Userecurringreset";
+import { useRecurringReset } from "@/hooks/useRecurringReset";
 import { AuthGuard } from "@/components/layout/AuthGuard";
 import { Navbar } from "@/components/layout/Navbar";
 import { KanbanColumn } from "@/components/kanban/KanbanColumn";
 import {
   KanbanFilters,
   type FilterState,
-} from "@/components/kanban/Kanbanfilters";
+} from "@/components/kanban/KanbanFilters";
+import { DashboardStats } from "@/components/kanban/DashboardStats";
 import { TaskForm } from "@/components/tasks/TaskForm";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -59,24 +60,19 @@ const DEFAULT_FILTERS: FilterState = {
   onlyRecurring: false,
 };
 
-// ─── Lógica de filtrado centralizada ─────────────────────────────────────────
 const applyFilters = (tasks: Task[], filters: FilterState): Task[] => {
   return tasks.filter((task) => {
     if (
       filters.search &&
       !task.title.toLowerCase().includes(filters.search.toLowerCase())
-    ) {
+    )
       return false;
-    }
-    if (filters.priority !== "ALL" && task.priority !== filters.priority) {
+    if (filters.priority !== "ALL" && task.priority !== filters.priority)
       return false;
-    }
     if (filters.onlyOverdue) {
       if (!task.dueDate || new Date(task.dueDate) >= new Date()) return false;
     }
-    if (filters.onlyRecurring && !task.isRecurring) {
-      return false;
-    }
+    if (filters.onlyRecurring && !task.isRecurring) return false;
     return true;
   });
 };
@@ -86,15 +82,18 @@ const DashboardContent = () => {
   const [modalState, setModalState] = useState<ModalState>({ type: "closed" });
   const [activeTab, setActiveTab] = useState<TaskStatus>(TaskStatus.TODO);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [showStats, setShowStats] = useState(true);
 
   const { data: kanban, isLoading, isError, refetch } = useKanbanBoard();
 
-  // Reset de tareas recurrentes al cargar
   useRecurringReset();
 
-  // ─── Kanban filtrado con useMemo ──────────────────────────────────────────
-  // useMemo evita recalcular los filtros en cada render
-  // solo se recalcula cuando cambian kanban o filters
+  // Todas las tareas flat para las estadísticas
+  const allTasks = useMemo((): Task[] => {
+    if (!kanban) return [];
+    return Object.values(kanban).flat();
+  }, [kanban]);
+
   const filteredKanban = useMemo((): KanbanBoard | undefined => {
     if (!kanban) return undefined;
     return {
@@ -133,9 +132,7 @@ const DashboardContent = () => {
       />
     );
 
-  const totalTasks = kanban
-    ? Object.values(kanban).reduce((acc, tasks) => acc + tasks.length, 0)
-    : 0;
+  const totalTasks = allTasks.length;
 
   return (
     <>
@@ -152,17 +149,40 @@ const DashboardContent = () => {
                 : `${totalTasks} tarea${totalTasks !== 1 ? "s" : ""} en total`}
             </p>
           </div>
-          <Button
-            onClick={() => handleOpenCreate()}
-            size="sm"
-            leftIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
-            className="shrink-0"
-          >
-            <span className="hidden sm:inline">Nueva tarea</span>
-            <span className="sm:hidden">Nueva</span>
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Toggle stats */}
+            {totalTasks > 0 && (
+              <button
+                onClick={() => setShowStats((v) => !v)}
+                className={cn(
+                  "hidden sm:flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                  showStats
+                    ? "border-indigo-300 bg-indigo-50 text-indigo-600 dark:border-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                    : "border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800",
+                )}
+                aria-pressed={showStats}
+              >
+                📊 {showStats ? "Ocultar stats" : "Ver stats"}
+              </button>
+            )}
+            <Button
+              onClick={() => handleOpenCreate()}
+              size="sm"
+              leftIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
+            >
+              <span className="hidden sm:inline">Nueva tarea</span>
+              <span className="sm:hidden">Nueva</span>
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* Stats — solo desktop y si hay tareas */}
+      {showStats && totalTasks > 0 && (
+        <div className="hidden sm:block">
+          <DashboardStats tasks={allTasks} />
+        </div>
+      )}
 
       {/* Filtros */}
       <KanbanFilters
