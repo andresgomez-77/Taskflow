@@ -4,15 +4,15 @@ import { useState, useMemo } from "react";
 import { Plus } from "lucide-react";
 import { TaskStatus, TaskPriority, type Task, type KanbanBoard } from "@/types";
 import { useKanbanBoard } from "@/hooks/useTasks";
-import { useRecurringReset } from "@/hooks/useRecurringReset";
+import { useRecurringReset } from "@/hooks/Userecurringreset";
 import { AuthGuard } from "@/components/layout/AuthGuard";
 import { Navbar } from "@/components/layout/Navbar";
 import { KanbanColumn } from "@/components/kanban/KanbanColumn";
 import {
   KanbanFilters,
   type FilterState,
-} from "@/components/kanban/KanbanFilters";
-import { DashboardStats } from "@/components/kanban/DashboardStats";
+} from "@/components/kanban/Kanbanfilters";
+import { DashboardStats } from "@/components/kanban/Dashboardstats";
 import { TaskForm } from "@/components/tasks/TaskForm";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
