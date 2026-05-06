@@ -32,6 +32,22 @@ export class LoginDto {
   declare password: string;
 }
 
+export class ForgotPasswordDto {
+  @IsEmail({}, { message: "Ingresa un email válido" })
+  declare email: string;
+}
+
+export class ResetPasswordDto {
+  @IsString()
+  @MinLength(1)
+  declare token: string;
+
+  @IsString()
+  @MinLength(8, { message: "Mínimo 8 caracteres" })
+  @MaxLength(50)
+  declare newPassword: string;
+}
+
 // AuthResponseDto no usa decoradores — puede ser interface
 export interface AuthResponseDto {
   accessToken: string;

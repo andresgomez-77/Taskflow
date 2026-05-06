@@ -92,17 +92,30 @@ export default function LoginPage() {
               autoComplete="email"
               required
             />
-            <Input
-              label="Contraseña"
-              type="password"
-              placeholder="••••••••"
-              value={formState.password}
-              onChange={(e) => handleChange("password", e.target.value)}
-              error={errors.password}
-              disabled={isPending}
-              autoComplete="current-password"
-              required
-            />
+
+            <div className="flex flex-col gap-1.5">
+              <Input
+                label="Contraseña"
+                type="password"
+                placeholder="••••••••"
+                value={formState.password}
+                onChange={(e) => handleChange("password", e.target.value)}
+                error={errors.password}
+                disabled={isPending}
+                autoComplete="current-password"
+                required
+              />
+              {/* Link forgot password */}
+              <div className="flex justify-end">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-indigo-600 hover:text-indigo-700 hover:underline dark:text-indigo-400 dark:hover:text-indigo-300"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
+            </div>
+
             <Button type="submit" className="mt-2 w-full" isLoading={isPending}>
               {isPending ? "Iniciando sesión..." : "Iniciar sesión"}
             </Button>

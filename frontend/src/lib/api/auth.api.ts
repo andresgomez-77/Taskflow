@@ -17,6 +17,10 @@ interface ChangePasswordData {
   currentPassword: string;
   newPassword: string;
 }
+interface ResetPasswordData {
+  token: string;
+  newPassword: string;
+}
 
 export const authApi = {
   register: async (data: RegisterData): Promise<AuthResponse> => {
@@ -41,6 +45,18 @@ export const authApi = {
 
   changePassword: async (data: ChangePasswordData) => {
     const response = await apiClient.patch("/auth/password", data);
+    return response.data;
+  },
+
+  forgotPassword: async (email: string): Promise<{ message: string }> => {
+    const response = await apiClient.post("/auth/forgot-password", { email });
+    return response.data;
+  },
+
+  resetPassword: async (
+    data: ResetPasswordData,
+  ): Promise<{ message: string }> => {
+    const response = await apiClient.post("/auth/reset-password", data);
     return response.data;
   },
 };

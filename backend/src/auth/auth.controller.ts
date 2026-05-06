@@ -14,6 +14,8 @@ import {
   AuthResponseDto,
   UpdateProfileDto,
   ChangePasswordDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
 } from "./dto/auth.dto";
 import { Public } from "../common/decorators/public.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -65,6 +67,19 @@ export class AuthController {
     );
   }
 
+  // POST /api/auth/forgot-password
+  @Public()
+  @Post("forgot-password")
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email);
+  }
+
+  // POST /api/auth/reset-password
+  @Public()
+  @Post("reset-password")
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.token, dto.newPassword);
+  }
   // GET /api/auth/me — Ruta protegida: requiere JWT válido
   @Get("me")
   async getProfile(@CurrentUser() user: JwtPayload) {
