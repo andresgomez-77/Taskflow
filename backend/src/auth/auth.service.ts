@@ -2,12 +2,12 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
-} from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
-import { PrismaService } from '../prisma/prisma.service';
-import type { RegisterDto, LoginDto, AuthResponseDto } from './dto/auth.dto';
-import type { JwtPayload } from './interfaces/jwt-payload.interface';
+} from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
+import * as bcrypt from "bcrypt";
+import { PrismaService } from "../prisma/prisma.service";
+import type { RegisterDto, LoginDto, AuthResponseDto } from "./dto/auth.dto";
+import type { JwtPayload } from "./interfaces/jwt-payload.interface";
 
 const BCRYPT_ROUNDS = 12; // Factor de trabajo. Más = más seguro pero más lento.
 
@@ -27,7 +27,7 @@ export class AuthService {
 
     if (existingUser) {
       // ConflictException = 409 HTTP
-      throw new ConflictException('Ya existe una cuenta con este email.');
+      throw new ConflictException("Ya existe una cuenta con este email.");
     }
 
     // 2. Hashear la contraseña — NUNCA guardar texto plano en DB
@@ -62,18 +62,22 @@ export class AuthService {
     // ⚠️ Error intencionalmente genérico: no revelamos si el email existe o no.
     // Un mensaje como "email no encontrado" permitiría enumerar usuarios.
     if (!user) {
-      throw new UnauthorizedException('Credenciales inválidas.');
+      throw new UnauthorizedException("Credenciales inválidas.");
     }
 
     // 2. Comparar contraseña con el hash
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Credenciales inválidas.');
+      throw new UnauthorizedException("Credenciales inválidas.");
     }
 
     // 3. Generar JWT y retornar
-    return this.buildAuthResponse({ id: user.id, email: user.email, name: user.name });
+    return this.buildAuthResponse({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+    });
   }
 
   // ─── getProfile ───────────────────────────────────────────────────────────
@@ -90,10 +94,55 @@ export class AuthService {
     });
   }
 
+  // ─── updateProfile ────────────────────────────────────────────────────────
+  async updateProfile(userId: string, name: string) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { name },
+      select: { id: true, email: true, name: true },
+    });
+    return user;
+  }
+
+  // ─── changePassword ───────────────────────────────────────────────────────
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    // 1. Buscar usuario con password para verificar
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException("Usuario no encontrado.");
+    }
+
+    // 2. Verificar contraseña actual
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) {
+      throw new UnauthorizedException("La contraseña actual es incorrecta.");
+    }
+
+    // 3. Hashear y guardar nueva contraseña
+    const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    return { message: "Contraseña actualizada correctamente." };
+  }
+
   // ─── buildAuthResponse (private helper) ──────────────────────────────────
   // Centralizamos la creación del JWT aquí para no repetir lógica en register y login.
   // DRY principle en acción.
-  private buildAuthResponse(user: { id: string; email: string; name: string | null }): AuthResponseDto {
+  private buildAuthResponse(user: {
+    id: string;
+    email: string;
+    name: string | null;
+  }): AuthResponseDto {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,

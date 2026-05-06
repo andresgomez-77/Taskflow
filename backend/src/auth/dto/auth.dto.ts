@@ -1,42 +1,63 @@
-import { IsEmail, IsString, MinLength, MaxLength, IsOptional } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  MinLength,
+  MaxLength,
+  IsOptional,
+} from "class-validator";
 
-// ─── RegisterDto ──────────────────────────────────────────────────────────────
-// Los DTOs (Data Transfer Objects) definen la forma de los datos que entran.
-// class-validator los valida automáticamente con el ValidationPipe global.
-// Si la validación falla, NestJS retorna un 400 con mensajes de error claros.
 export class RegisterDto {
-  @IsEmail({}, { message: 'Ingresa un email válido' })
-  email: string;
+  @IsEmail({}, { message: "Ingresa un email válido" })
+  declare email: string;
 
   @IsString()
-  @MinLength(8, { message: 'La contraseña debe tener mínimo 8 caracteres' })
-  @MaxLength(50, { message: 'La contraseña no puede superar los 50 caracteres' })
-  password: string;
+  @MinLength(8, { message: "La contraseña debe tener mínimo 8 caracteres" })
+  @MaxLength(50, {
+    message: "La contraseña no puede superar los 50 caracteres",
+  })
+  declare password: string;
 
   @IsString()
   @IsOptional()
   @MaxLength(100)
-  name?: string;
+  declare name?: string;
 }
 
-// ─── LoginDto ─────────────────────────────────────────────────────────────────
 export class LoginDto {
-  @IsEmail({}, { message: 'Ingresa un email válido' })
-  email: string;
+  @IsEmail({}, { message: "Ingresa un email válido" })
+  declare email: string;
 
   @IsString()
-  @MinLength(1, { message: 'La contraseña es requerida' })
-  password: string;
+  @MinLength(1, { message: "La contraseña es requerida" })
+  declare password: string;
 }
 
-// ─── AuthResponseDto ──────────────────────────────────────────────────────────
-// Tipamos la respuesta que devuelve el backend al frontend.
-// Esto es lo que el frontend guardará después del login/register.
-export class AuthResponseDto {
+// AuthResponseDto no usa decoradores — puede ser interface
+export interface AuthResponseDto {
   accessToken: string;
   user: {
     id: string;
     email: string;
     name: string | null;
   };
+}
+
+export class UpdateProfileDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  declare name: string;
+}
+
+export class ChangePasswordDto {
+  @IsString()
+  @MinLength(1)
+  declare currentPassword: string;
+
+  @IsString()
+  @MinLength(8, {
+    message: "La nueva contraseña debe tener mínimo 8 caracteres",
+  })
+  @MaxLength(50)
+  declare newPassword: string;
 }
