@@ -183,7 +183,7 @@ export const DashboardStats = ({ tasks }: DashboardStatsProps) => {
         </div>
 
         {/* Gráfica + tasa de completado */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="hidden sm:grid grid-cols-1 gap-3 sm:grid-cols-3">
           {/* Gráfica de área — ocupa 2/3 */}
           <div className="sm:col-span-2 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <div className="flex items-center justify-between mb-3">

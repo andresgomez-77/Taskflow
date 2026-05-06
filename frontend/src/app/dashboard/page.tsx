@@ -178,11 +178,7 @@ const DashboardContent = () => {
       </div>
 
       {/* Stats — solo desktop y si hay tareas */}
-      {showStats && totalTasks > 0 && (
-        <div className="hidden sm:block">
-          <DashboardStats tasks={allTasks} />
-        </div>
-      )}
+      {showStats && totalTasks > 0 && <DashboardStats tasks={allTasks} />}
 
       {/* Filtros */}
       <KanbanFilters
